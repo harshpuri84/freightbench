@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.jsonl
+!examples/*.jsonl
+.DS_Store
+.venv/

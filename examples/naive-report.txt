@@ -1,0 +1,42 @@
+FreightBench results
+============================================================
+fields scored          838
+pass rate (all)        62.3%
+pass rate (critical)   72.1%
+
+outcome breakdown
+------------------------------------------------------------
+  correct             315   37.6%
+  abstained_ok        207   24.7%
+  wrong                31    3.7%
+  missed              285   34.0%
+  hallucinated          0    0.0%
+
+hallucination rate     0.0%
+  (of fields that were legitimately absent, the share invented anyway)
+
+weakest fields
+------------------------------------------------------------
+  service_level                  0.0%  (n=24)
+  shipper_country                0.0%  (n=24)
+  consignee_country              0.0%  (n=24)
+  hs_code                        0.0%  (n=24)
+  currency                       0.0%  (n=24)
+  pickup_required                0.0%  (n=24)
+  delivery_required              0.0%  (n=24)
+  temperature_controlled         0.0%  (n=24)
+
+
+pass rate by pathology
+------------------------------------------------------------
+  multi_shipment          40.0% critical-field pass  (n=2)
+  unit_ambiguity          70.0% critical-field pass  (n=2)
+  date_ambiguity          70.0% critical-field pass  (n=2)
+  trailing_correction     76.7% critical-field pass  (n=2)
+  weight_conflict         78.6% critical-field pass  (n=2)
+  clean                   80.0% critical-field pass  (n=2)
+  ambiguous_port          80.0% critical-field pass  (n=2)
+  dg_undeclared           80.0% critical-field pass  (n=2)
+  agent_not_shipper       83.3% critical-field pass  (n=2)
+  forwarded_thread        83.3% critical-field pass  (n=2)
+  missing_critical        83.3% critical-field pass  (n=2)

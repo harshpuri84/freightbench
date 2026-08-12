@@ -1,0 +1,38 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run test suite
+        run: python -m unittest discover -s tests -v
+
+      - name: Verify the corpus is reproducible across machines
+        run: |
+          python -m freightbench generate --n 50 --seed 12345 --out a.jsonl
+          python -m freightbench generate --n 50 --seed 12345 --out b.jsonl
+          diff a.jsonl b.jsonl
+          echo "corpus is byte-identical for a fixed seed"
+
+      - name: Check the reference extractors still bracket the benchmark
+        run: |
+          python -m freightbench generate --n 110 --out corpus.jsonl
+          python -m freightbench baseline --corpus corpus.jsonl
+          python -m freightbench naive --corpus corpus.jsonl

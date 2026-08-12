@@ -1,5 +1,8 @@
 # FreightBench
 
+[![tests](https://github.com/harshpuri84/freightbench/actions/workflows/tests.yml/badge.svg)](https://github.com/harshpuri84/freightbench/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 An evaluation benchmark for agents that extract structured bookings from freight-forwarding emails.
 
 Booking intake is the entry point of every forwarding operation, and it is a swamp: dozens of senders, no schema, values contradicted three paragraphs later, half of it exceptions. It is also the workflow AI vendors most want to sell into, and there is no public way to compare them. This is an attempt at one.

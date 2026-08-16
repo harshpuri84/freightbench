@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from freightbench.generate import Generator  # noqa: E402
 from freightbench.naive import predictions as naive_predictions  # noqa: E402
 from freightbench.pathologies import PATHOLOGIES  # noqa: E402
-from freightbench.schema import CRITICAL_FIELDS, SCHEMA  # noqa: E402
+from freightbench.schema import CRITICAL_FIELDS, FIELDS_BY_NAME, SCHEMA  # noqa: E402
 from freightbench.score import (  # noqa: E402
     ABSTAINED_OK, CORRECT, HALLUCINATED, MISSED, WRONG,
     score_corpus, score_record, values_match,
@@ -39,6 +39,76 @@ class TestDeterminism(unittest.TestCase):
         self.assertEqual({d.pathology for d in docs}, {p.key for p in PATHOLOGIES})
 
 
+class TestTruthIsEvidenced(unittest.TestCase):
+    """Every non-null ground-truth value must be evidenced in the document.
+
+    A truth value the document does not state makes the scorer punish correct
+    abstention as 'missed'. That is the exact failure this benchmark exists to
+    expose in other systems, so it must not commit it itself.
+    """
+
+    # Fields the benchmark deliberately expects the extractor to derive rather
+    # than read verbatim: LOCODEs follow from city + mode, and hazard follows
+    # from the commodity, not from the sender's assertion.
+    DERIVED = ("origin_location", "destination_location",
+               "dangerous_goods", "un_number")
+
+    @staticmethod
+    def _evidenced(field, value, text):
+        from freightbench.generate import _fmt_date
+        from datetime import date as _date
+        rule = FIELDS_BY_NAME[field].compare
+        if rule == "date":
+            d = _date.fromisoformat(str(value)[:10])
+            return any(_fmt_date(d, s).casefold() in text
+                       for s in ("iso", "eu", "us", "long"))
+        if rule == "numeric":
+            v = float(value)
+            candidates = [f"{v:g}"]
+            if v == int(v):
+                candidates.append(str(int(v)))
+            if field == "gross_weight_kg":
+                candidates.append(f"{round(v * 2.20462, 1):g}")  # stated in lbs
+            return any(c in text for c in candidates)
+        if rule == "boolean":
+            return False  # non-derived booleans cannot be evidenced by silence
+        return str(value).casefold() in text
+
+    def test_every_truth_value_is_evidenced(self):
+        for d in Generator(20260811).corpus(66):
+            text = (d.subject + "\n" + d.body).casefold()
+            for rec in d.shipments:
+                for name, value in rec.items():
+                    if value is None or name in self.DERIVED:
+                        continue
+                    if name in d.contested_fields:
+                        continue
+                    self.assertTrue(
+                        self._evidenced(name, value, text),
+                        f"{d.doc_id} ({d.pathology}): truth {name}={value!r} "
+                        f"is not evidenced anywhere in the document",
+                    )
+
+
+class TestLocationTable(unittest.TestCase):
+    """A differing air LOCODE must belong to the same city, not a gateway.
+
+    'Shanghai' naming both CNSHA and CNPVG is a genuine collision: mode picks
+    between two entities that really do share the city name, which is what
+    ambiguous_port tests. 'Rotterdam' resolving to Amsterdam Schiphol is a
+    different claim — a routing decision about which airport serves a port
+    city — and reasonable forwarders disagree about it. Asserting one as truth
+    penalises an extractor for correctly reading the place the document named.
+    """
+
+    SAME_CITY_PAIRS = {"shanghai"}
+
+    def test_air_differs_only_for_documented_same_city_pairs(self):
+        from freightbench.reference import LOCATIONS
+        differing = {k for k, (sea, air, _, _) in LOCATIONS.items() if sea != air}
+        self.assertEqual(differing, self.SAME_CITY_PAIRS)
+
+
 class TestGroundTruth(unittest.TestCase):
     """Each pathology must encode the *correct behaviour*, not the stated text."""
 
@@ -47,6 +117,13 @@ class TestGroundTruth(unittest.TestCase):
         self.by_key = {}
         for d in self.docs:
             self.by_key.setdefault(d.pathology, []).append(d)
+
+    def test_multi_shipment_instruction_sentence_is_not_scored(self):
+        # The body states "They must not be consolidated." — whether that
+        # belongs in special_instructions is judgment, not fact. Scoring it
+        # either way punishes a defensible reading.
+        for d in self.by_key["multi_shipment"]:
+            self.assertIn("special_instructions", d.contested_fields)
 
     def test_missing_critical_expects_null(self):
         for d in self.by_key["missing_critical"]:
@@ -149,7 +226,11 @@ class TestScoring(unittest.TestCase):
         preds = {d["doc_id"]: [{} for _ in d["ground_truth"]["shipments"]] for d in docs}
         report = score_corpus(docs, preds)
         self.assertGreater(report.pass_rate(), 0.0)
-        self.assertLess(report.pass_rate("critical"), 0.10)
+        # Two critical fields (shipper/consignee country) are never evidenced
+        # by the v0.1 templates, so even the empty extractor collects their
+        # abstentions. The floor is ~15%, not ~0% — and any real system must
+        # still clear it decisively.
+        self.assertLess(report.pass_rate("critical"), 0.25)
         self.assertEqual(report.counts().get(HALLUCINATED, 0), 0)
 
     def test_naive_beats_empty_but_is_far_from_solved(self):
@@ -172,6 +253,13 @@ class TestSchema(unittest.TestCase):
 
 
 class TestCLI(unittest.TestCase):
+    def test_prompt_prints_the_canonical_instructions(self):
+        root = Path(__file__).resolve().parents[1]
+        r = subprocess.run([sys.executable, "-m", "freightbench", "prompt"],
+                           cwd=root, check=True, capture_output=True, text=True)
+        self.assertIn("booking_reference", r.stdout)
+        self.assertIn("null", r.stdout)
+
     def test_generate_and_baseline_run(self):
         root = Path(__file__).resolve().parents[1]
         out = root / "tests" / "_tmp_corpus.jsonl"

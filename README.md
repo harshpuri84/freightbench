@@ -50,21 +50,41 @@ The **hallucination rate** — of fields legitimately absent, the share invented
 An empty extractor that predicts nothing:
 
 ```
-pass rate (all)        25.0%
-pass rate (critical)    0.6%
+pass rate (all)        53.9%
+pass rate (critical)   15.1%
 ```
 
-That 25% is not noise. Abstaining on a genuinely absent field is correct behaviour, so any real system must clear this bar decisively before its headline number means anything. The critical-field figure is the honest one.
+That floor is high on purpose and it is not noise. A null is the correct answer for every field the document does not state, and most fields in a real booking email are not stated. Any real system must clear this bar decisively before its headline number means anything. The critical-field figure is the honest one.
 
 The bundled naive rule-based extractor, roughly what a competent engineer writes in an afternoon:
 
 ```
-pass rate (all)        62.7%
-pass rate (critical)   72.0%
+pass rate (all)        91.9%
+pass rate (critical)   86.6%
 hallucination rate      0.0%
 ```
 
-Its 72% looks respectable until you break it out by pathology. It scores **39% on multi-shipment**, because it always emits exactly one record per email, and it fails unit conversion and trailing corrections outright. It never hallucinates only because it never guesses. That profile — passable average, catastrophic on specific failure modes — is exactly what a single accuracy number conceals, and it is the reason this benchmark reports by cause.
+Its 86.6% looks strong until you break it out by pathology. It scores **58% on multi-shipment**, because it always emits exactly one record per email. It never hallucinates only because it never guesses. That profile — flattering average, catastrophic on a specific failure mode — is exactly what a single accuracy number conceals, and it is the reason this benchmark reports by cause.
+
+## Model results (v0.2 preview)
+
+Three Claude tiers, run 2026-08-16 on the canonical corpus (seed 20260811, n=200, prompt v1 from [`freightbench/llm.py`](freightbench/llm.py)):
+
+| System | Pass (all) | Pass (critical) | Wrong | Missed | Hallucination rate |
+|---|---|---|---|---|---|
+| empty | 53.9% | 15.1% | 0.0% | 46.1% | 0.0% |
+| naive rules | 91.9% | 86.6% | 3.5% | 4.6% | 0.0% |
+| Haiku 4.5 | 87.4% | 81.2% | 4.3% | 4.7% | 6.5% |
+| Sonnet | 94.5% | 89.7% | 1.6% | 3.5% | 0.7% |
+| Opus | 94.9% | 90.7% | 1.4% | 3.7% | 0.0% |
+
+**Method, stated plainly:** these runs went through Claude Code subagents reading 20 documents per call, not through the raw API. Sampling parameters were not pinned. Treat them as a preview: directionally informative, not third-party reproducible. A raw-API harness with pinned parameters is the planned replacement, and the canonical prompt they must use ships in this repo (`python3 -m freightbench prompt`).
+
+Three things the table hides that the pathology breakdown shows:
+
+1. **The afternoon of regexes beats Haiku** on 10 of 11 pathologies. The exception is multi-shipment (naive 58%, Haiku 85%): recognising that one email contains two bookings is structural understanding, and it is the first place the LLM earns its keep.
+2. **Hallucination separates the tiers: 6.5% → 0.7% → 0.0%.** Haiku's inventions are mostly booleans asserted from silence (`temperature_controlled: false` where the email says nothing) and country codes inferred from company legal suffixes. Both look harmless and both are exactly the confident-wrong output that costs money unattended.
+3. **Naive still beats Sonnet and Opus on the rigid-template pathologies** (agent-not-shipper, weight-conflict, forwarded-thread: 96% vs ~90%). The v0.1 templates are regex-friendly, which flatters rules. That is a limitation of this corpus, not a finding about models, and it is the strongest argument for the realism work planned next.
 
 ## Scoring rules worth knowing
 
@@ -81,7 +101,7 @@ Emit `{doc_id: [record, ...]}` keyed by document, one record per shipment, then:
 python3 -m freightbench score --corpus corpus.jsonl --predictions yours.json
 ```
 
-Field names and comparison rules are in [`freightbench/schema.py`](freightbench/schema.py) — 35 fields, each with its own criticality and comparison rule.
+Field names and comparison rules are in [`freightbench/schema.py`](freightbench/schema.py) — 35 fields, each with its own criticality and comparison rule. If you are scoring an LLM, use the canonical prompt (`python3 -m freightbench prompt`); two systems scored with different prompts are not comparable, so the prompt is versioned and part of the benchmark definition.
 
 ## Tests
 
@@ -89,13 +109,15 @@ Field names and comparison rules are in [`freightbench/schema.py`](freightbench/
 python3 -m unittest discover -s tests
 ```
 
-24 tests covering determinism, ground-truth correctness per pathology, and that the outcome categories stay distinct. A benchmark that is not tested is an opinion with a percentage sign attached.
+38 tests covering determinism, ground-truth correctness per pathology, that the outcome categories stay distinct, and one invariant learned the hard way: **every non-null truth value must be evidenced in the document**. A benchmark that is not tested is an opinion with a percentage sign attached.
 
 ## Status and honesty about scope
 
-Version 0.1. What exists: the generator, the schema, deterministic scoring, and two reference extractors.
+Version 0.2. What exists: the generator, the schema, deterministic scoring, two reference extractors, a versioned canonical prompt, and preview results for three Claude tiers.
 
-What does not exist yet, and should be assumed missing rather than implied: LLM-judged scoring for the free-text fields, PDF and HAWB documents (currently email bodies only), and any result for a frontier model — I have not published one, and no number here should be read as a model comparison.
+What changed since 0.1, because a benchmark should confess its own bugs: v0.1 ground truth carried values for ten fields that no template ever rendered into a document, which scored correct abstention as "missed" and deflated every extractor. v0.2 fixes the truth, adds the evidence invariant to the test suite, and regenerates the same documents byte-for-byte from the same seed. **No v0.1 number is comparable to the numbers above.**
+
+What does not exist yet, and should be assumed missing rather than implied: raw-API model runs with pinned sampling (the table above is an agent-harness preview), non-Claude models, LLM-judged scoring for the free-text fields, and PDF and HAWB documents (currently email bodies only).
 
 The synthetic corpus is a model of the problem, not a sample of it. It is built from the failure modes I have watched break production extraction pipelines, which is a real but partial view, and a system that scores well here has cleared a designed obstacle course rather than proven itself on live mail.
 

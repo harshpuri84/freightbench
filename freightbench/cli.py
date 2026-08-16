@@ -78,6 +78,19 @@ def cmd_naive(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_prompt(_: argparse.Namespace) -> int:
+    """Print the canonical extraction instructions (without a document).
+
+    Two systems scored with different prompts are not comparable, so the
+    prompt is part of the benchmark definition and versioned in the repo.
+    """
+    from .llm import PROMPT_VERSION, build_prompt
+    rules = build_prompt({"subject": "", "body": ""}).split("Subject:")[0].rstrip()
+    print(f"# canonical prompt v{PROMPT_VERSION} — freightbench/llm.py\n")
+    print(rules)
+    return 0
+
+
 def cmd_pathologies(_: argparse.Namespace) -> int:
     for p in PATHOLOGIES:
         print(f"\n{p.key}\n  {p.label}")
@@ -111,6 +124,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("pathologies", help="describe what each pathology tests")
     p.set_defaults(func=cmd_pathologies)
+
+    pr = sub.add_parser("prompt", help="print the canonical extraction prompt")
+    pr.set_defaults(func=cmd_prompt)
 
     args = ap.parse_args(argv)
     return args.func(args)

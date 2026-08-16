@@ -109,6 +109,15 @@ class Generator:
             stackable=self.rng.random() < 0.7,
             insurance_required=self.rng.random() < 0.3,
         )
+        # The draws above keep the RNG stream stable, but a truth value is only
+        # assertable if the rendered document evidences it. These fields are
+        # never rendered by any template, so their truth is null: an extractor
+        # that returns a value here is guessing, and the scorer should say so.
+        for unrendered in ("service_level", "shipper_country", "consignee_country",
+                           "hs_code", "currency", "pickup_required",
+                           "delivery_required", "temperature_controlled",
+                           "stackable", "insurance_required"):
+            r[unrendered] = None
         r["_o"] = o_key
         r["_d"] = d_key
         return r
@@ -252,9 +261,17 @@ class Generator:
                 + "\n\n=== SHIPMENT 2 ===\n" + self._block(b)
                 + "\n\nThey must not be consolidated."
                 + self._sig(company=a["shipper_name"]))
+        # The subject line carries no reference and neither block renders one,
+        # so the booking references are not evidenced anywhere.
+        gt_a, gt_b = self._clean(a), self._clean(b)
+        gt_a["booking_reference"] = None
+        gt_b["booking_reference"] = None
         return Document(doc_id, "multi_shipment",
                         "Two bookings this week", body,
-                        [self._clean(a), self._clean(b)],
+                        [gt_a, gt_b],
+                        # "They must not be consolidated." is in the body; whether
+                        # it belongs in special_instructions is judgment, not fact.
+                        contested_fields=["special_instructions"],
                         note="Two records expected. Blending them into one is the failure.")
 
     def forwarded_thread(self, doc_id: str) -> Document:
@@ -307,7 +324,7 @@ class Generator:
         dg_items = [c for c, v in COMMODITIES.items() if v[3]]
         commodity = self.rng.choice(dg_items)
         hs, _, un, _ = COMMODITIES[commodity]
-        r.update(commodity_description=commodity, hs_code=hs,
+        r.update(commodity_description=commodity,
                  dangerous_goods=True, un_number=un)
         body = ("Hi,\n\nStandard booking, nothing special.\n\n"
                 + self._block(r)

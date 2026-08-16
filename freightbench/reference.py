@@ -1,20 +1,28 @@
 """Reference data for generated documents. Entirely invented.
 
-Locations deliberately include cities where the seaport and the airport are
-distinct entities, because that collision is the point of the ambiguous_port
-pathology.
+Locations deliberately include a city where the seaport and the airport are
+distinct entities *sharing the city's name*, because that collision is the
+point of the ambiguous_port pathology.
+
+Only Shanghai qualifies. An earlier version also mapped Rotterdam to Amsterdam
+Schiphol, Busan to Incheon, Felixstowe to Heathrow and Santos to Guarulhos.
+That is a different claim: not "which of this city's two entities do you mean"
+but "which airport serves this port city", a routing decision forwarders
+resolve differently. Asserting it as truth penalised extractors for correctly
+reading the place the document actually named, and it produced every single
+LOCODE error in the first model run.
 """
 
 LOCATIONS = {
     # city key -> (sea LOCODE, air LOCODE, country ISO-2, display city)
     "shanghai": ("CNSHA", "CNPVG", "CN", "Shanghai"),
-    "rotterdam": ("NLRTM", "NLAMS", "NL", "Rotterdam"),
+    "rotterdam": ("NLRTM", "NLRTM", "NL", "Rotterdam"),
     "hamburg": ("DEHAM", "DEHAM", "DE", "Hamburg"),
     "singapore": ("SGSIN", "SGSIN", "SG", "Singapore"),
-    "busan": ("KRPUS", "KRICN", "KR", "Busan"),
-    "felixstowe": ("GBFXT", "GBLHR", "GB", "Felixstowe"),
+    "busan": ("KRPUS", "KRPUS", "KR", "Busan"),
+    "felixstowe": ("GBFXT", "GBFXT", "GB", "Felixstowe"),
     "chennai": ("INMAA", "INMAA", "IN", "Chennai"),
-    "santos": ("BRSSZ", "BRGRU", "BR", "Santos"),
+    "santos": ("BRSSZ", "BRSSZ", "BR", "Santos"),
 }
 
 COMPANIES = [

@@ -1,14 +1,14 @@
 FreightBench results
 ============================================================
 fields scored          834
-pass rate (all)        91.4%
-pass rate (critical)   86.6%
+pass rate (all)        92.0%
+pass rate (critical)   88.0%
 
 outcome breakdown
 ------------------------------------------------------------
-  correct             315   37.8%
+  correct             320   38.4%
   abstained_ok        447   53.6%
-  wrong                31    3.7%
+  wrong                26    3.1%
   missed               41    4.9%
   hallucinated          0    0.0%
 
@@ -20,23 +20,23 @@ weakest fields
   dangerous_goods               50.0%  (n=24)
   un_number                     54.2%  (n=24)
   packaging_type                62.5%  (n=24)
-  origin_location               70.8%  (n=24)
   gross_weight_kg               72.7%  (n=22)
-  destination_location          79.2%  (n=24)
+  origin_location               79.2%  (n=24)
   cargo_ready_date              83.3%  (n=24)
   customer_reference            91.7%  (n=24)
+  mode                          91.7%  (n=24)
 
 
 pass rate by pathology
 ------------------------------------------------------------
   multi_shipment          60.0% critical-field pass  (n=2)
-  unit_ambiguity          83.3% critical-field pass  (n=2)
-  date_ambiguity          83.3% critical-field pass  (n=2)
+  unit_ambiguity          86.7% critical-field pass  (n=2)
+  date_ambiguity          86.7% critical-field pass  (n=2)
   trailing_correction     90.0% critical-field pass  (n=2)
-  weight_conflict         92.9% critical-field pass  (n=2)
-  clean                   93.3% critical-field pass  (n=2)
   ambiguous_port          93.3% critical-field pass  (n=2)
   dg_undeclared           93.3% critical-field pass  (n=2)
-  agent_not_shipper       96.7% critical-field pass  (n=2)
+  weight_conflict         96.4% critical-field pass  (n=2)
+  clean                   96.7% critical-field pass  (n=2)
   forwarded_thread        96.7% critical-field pass  (n=2)
   missing_critical        96.7% critical-field pass  (n=2)
+  agent_not_shipper      100.0% critical-field pass  (n=2)

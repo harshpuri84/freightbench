@@ -35,6 +35,15 @@ class TestBuildPrompt(unittest.TestCase):
         self.assertIn("null", p)
         self.assertIn("order they appear", p)
 
+    def test_prompt_states_the_rules_the_benchmark_scores_as_derived(self):
+        # The scorer expects dangerous_goods, un_number and the LOCODEs to be
+        # derived rather than read. A prompt that says "do not guess" without
+        # naming these exceptions punishes the model for obeying it.
+        rules = build_prompt(self.doc).split("Rules:")[1].split("Subject:")[0]
+        self.assertIn("dangerous_goods", rules)
+        self.assertIn("un_number", rules)
+        self.assertIn("commodity", rules)
+
     def test_prompt_does_not_leak_ground_truth(self):
         p = build_prompt(self.doc)
         self.assertNotIn("ground_truth", p)

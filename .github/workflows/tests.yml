@@ -36,3 +36,6 @@ jobs:
           python -m freightbench generate --n 110 --out corpus.jsonl
           python -m freightbench baseline --corpus corpus.jsonl
           python -m freightbench naive --corpus corpus.jsonl
+
+      - name: Check the canonical prompt still prints
+        run: python -m freightbench prompt

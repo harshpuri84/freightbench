@@ -23,7 +23,7 @@ from typing import Any, Optional
 
 from .schema import SCHEMA
 
-PROMPT_VERSION = "1"
+PROMPT_VERSION = "2"
 
 _RULE_HINT = {
     "exact": "exact code",
@@ -56,6 +56,9 @@ Rules:
 - If the email states two conflicting values for the same field, return null for that field rather than choosing one.
 - If the email contains more than one distinct shipment, return one object per shipment, in the order they appear. Never merge them.
 - Weights in kilograms, volumes in cubic metres, dates as YYYY-MM-DD, locations as UN/LOCODE, countries as ISO-2.
+- Two exceptions to "do not guess", because these follow from the goods rather than from what the sender writes. Derive them even when the email does not state them, and do not treat the sender's opinion as authoritative:
+  - dangerous_goods and un_number follow from the commodity. If the commodity is regulated, say so and give the UN number even when the sender says no declaration is needed.
+  - origin_location and destination_location are UN/LOCODEs derived from the named place and the mode. A city's seaport and airport are different entities.
 - Return only the JSON array. No commentary.
 
 Subject: {doc["subject"]}

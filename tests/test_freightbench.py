@@ -90,6 +90,25 @@ class TestTruthIsEvidenced(unittest.TestCase):
                     )
 
 
+class TestLocationTable(unittest.TestCase):
+    """A differing air LOCODE must belong to the same city, not a gateway.
+
+    'Shanghai' naming both CNSHA and CNPVG is a genuine collision: mode picks
+    between two entities that really do share the city name, which is what
+    ambiguous_port tests. 'Rotterdam' resolving to Amsterdam Schiphol is a
+    different claim — a routing decision about which airport serves a port
+    city — and reasonable forwarders disagree about it. Asserting one as truth
+    penalises an extractor for correctly reading the place the document named.
+    """
+
+    SAME_CITY_PAIRS = {"shanghai"}
+
+    def test_air_differs_only_for_documented_same_city_pairs(self):
+        from freightbench.reference import LOCATIONS
+        differing = {k for k, (sea, air, _, _) in LOCATIONS.items() if sea != air}
+        self.assertEqual(differing, self.SAME_CITY_PAIRS)
+
+
 class TestGroundTruth(unittest.TestCase):
     """Each pathology must encode the *correct behaviour*, not the stated text."""
 

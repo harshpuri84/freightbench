@@ -102,6 +102,8 @@ What still holds:
 2. **An afternoon of regexes beats Haiku overall** (88.6% against 85.3% on critical fields) and loses catastrophically on one thing: multi-shipment, 59% against 88%. Recognising that one email contains two bookings is structural understanding, and it is where a language model first earns its keep.
 3. **Do not read Sonnet against Opus.** Two independent Sonnet runs over the same 200 documents differ by 0.6 points on critical fields, with 99.1% field-level agreement. Any gap smaller than that is noise, and the gap here is smaller than that.
 
+Every prediction behind these numbers is committed under [`research/model-run-2026-08-16/`](research/model-run-2026-08-16/), so any figure in the table can be re-derived without re-running a model. The corpus is not committed because it is byte-reproducible from its seed.
+
 **Method, stated plainly.** These runs went through agent subagents reading 20 documents per call, not the raw API, and sampling parameters were not pinned. Later runs were given an explicit instruction not to read this repository, after one agent disclosed that it had read the generator's reference tables — the answer key — and its batch was discarded and re-run. Treat these numbers as directional and not third-party reproducible. A pinned raw-API harness is the planned replacement; it cannot read the repository at all, which is now a second reason to build it.
 
 ### What v0.1 got wrong

@@ -4,4 +4,3 @@ __pycache__/
 !examples/*.jsonl
 .DS_Store
 .venv/
-research/

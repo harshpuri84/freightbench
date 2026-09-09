@@ -1,15 +1,15 @@
 FreightBench results
 ============================================================
 fields scored          834
-pass rate (all)        92.0%
-pass rate (critical)   88.0%
+pass rate (all)        67.0%
+pass rate (critical)   41.6%
 
 outcome breakdown
 ------------------------------------------------------------
-  correct             320   38.4%
+  correct             112   13.4%
   abstained_ok        447   53.6%
-  wrong                26    3.1%
-  missed               41    4.9%
+  wrong                19    2.3%
+  missed              256   30.7%
   hallucinated          0    0.0%
 
 hallucination rate     0.0%
@@ -17,26 +17,26 @@ hallucination rate     0.0%
 
 weakest fields
 ------------------------------------------------------------
-  dangerous_goods               50.0%  (n=24)
-  un_number                     54.2%  (n=24)
-  packaging_type                62.5%  (n=24)
-  gross_weight_kg               72.7%  (n=22)
-  origin_location               79.2%  (n=24)
-  cargo_ready_date              83.3%  (n=24)
-  customer_reference            91.7%  (n=24)
-  mode                          91.7%  (n=24)
+  gross_weight_kg               13.6%  (n=22)
+  cargo_ready_date              16.7%  (n=24)
+  customer_reference            20.8%  (n=24)
+  origin_location               20.8%  (n=24)
+  destination_location          20.8%  (n=24)
+  volume_cbm                    20.8%  (n=24)
+  packaging_type                20.8%  (n=24)
+  mode                          29.2%  (n=24)
 
 
 pass rate by pathology
 ------------------------------------------------------------
-  multi_shipment          60.0% critical-field pass  (n=2)
-  unit_ambiguity          86.7% critical-field pass  (n=2)
-  date_ambiguity          86.7% critical-field pass  (n=2)
-  trailing_correction     90.0% critical-field pass  (n=2)
-  ambiguous_port          93.3% critical-field pass  (n=2)
-  dg_undeclared           93.3% critical-field pass  (n=2)
-  weight_conflict         96.4% critical-field pass  (n=2)
-  clean                   96.7% critical-field pass  (n=2)
-  forwarded_thread        96.7% critical-field pass  (n=2)
-  missing_critical        96.7% critical-field pass  (n=2)
-  agent_not_shipper      100.0% critical-field pass  (n=2)
+  ambiguous_port          20.0% critical-field pass  (n=2)
+  weight_conflict         21.4% critical-field pass  (n=2)
+  multi_shipment          21.7% critical-field pass  (n=2)
+  date_ambiguity          23.3% critical-field pass  (n=2)
+  clean                   46.7% critical-field pass  (n=2)
+  forwarded_thread        46.7% critical-field pass  (n=2)
+  trailing_correction     53.3% critical-field pass  (n=2)
+  dg_undeclared           56.7% critical-field pass  (n=2)
+  unit_ambiguity          60.0% critical-field pass  (n=2)
+  agent_not_shipper       60.0% critical-field pass  (n=2)
+  missing_critical        66.7% critical-field pass  (n=2)

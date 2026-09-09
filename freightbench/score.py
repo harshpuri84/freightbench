@@ -38,6 +38,7 @@ class FieldResult:
     expected: Any
     got: Any
     criticality: str
+    pathology: str = ""
 
 
 @dataclass
@@ -55,6 +56,16 @@ class Report:
     def pass_rate(self, criticality: Optional[str] = None) -> float:
         rows = [r for r in self.results
                 if criticality is None or r.criticality == criticality]
+        if not rows:
+            return 0.0
+        ok = sum(1 for r in rows if r.outcome in (CORRECT, ABSTAINED_OK))
+        return ok / len(rows)
+
+    def pass_rate_for_pathology(self, pathology: str,
+                                criticality: Optional[str] = None) -> float:
+        rows = [r for r in self.results
+                if r.pathology == pathology
+                and (criticality is None or r.criticality == criticality)]
         if not rows:
             return 0.0
         ok = sum(1 for r in rows if r.outcome in (CORRECT, ABSTAINED_OK))
@@ -136,7 +147,8 @@ def _is_null(v: Any) -> bool:
 
 
 def score_record(doc_id: str, expected: dict[str, Any], got: dict[str, Any],
-                 contested: tuple[str, ...] = ()) -> list[FieldResult]:
+                 contested: tuple[str, ...] = (),
+                 pathology: str = "") -> list[FieldResult]:
     out: list[FieldResult] = []
     for f in SCHEMA:
         # A contested field has no assertable truth. Scoring it either way would
@@ -153,7 +165,8 @@ def score_record(doc_id: str, expected: dict[str, Any], got: dict[str, Any],
             outcome = MISSED
         else:
             outcome = CORRECT if values_match(f.name, e, g) else WRONG
-        out.append(FieldResult(doc_id, f.name, outcome, e, g, f.criticality))
+        out.append(FieldResult(doc_id, f.name, outcome, e, g, f.criticality,
+                               pathology))
     return out
 
 
@@ -167,11 +180,13 @@ def score_corpus(expected_docs: list[dict[str, Any]],
         contested = tuple(gt.get("contested_fields", []))
         truth_records = gt["shipments"]
         pred_records = predictions.get(doc_id, [])
+        pathology = doc.get("pathology", "")
 
         for i, truth in enumerate(truth_records):
             pred = pred_records[i] if i < len(pred_records) else {}
             report.results.extend(
-                score_record(f"{doc_id}#{i}", truth, pred, contested)
+                score_record(f"{doc_id}#{i}", truth, pred, contested,
+                             pathology=pathology)
             )
     return report
 

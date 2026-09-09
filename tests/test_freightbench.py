@@ -6,6 +6,7 @@ each pathology, and that the scorer keeps its outcome categories distinct.
 """
 
 import json
+import re
 import subprocess
 import sys
 import unittest
@@ -139,7 +140,7 @@ class TestGroundTruth(unittest.TestCase):
         for d in self.by_key["unit_ambiguity"]:
             self.assertIn("lbs", d.body)
             kg = d.shipments[0]["gross_weight_kg"]
-            lbs = float(d.body.split("Gross weight: ")[1].split(" lbs")[0])
+            lbs = float(re.search(r"([\d][\d.]*)\s*lbs", d.body).group(1))
             self.assertAlmostEqual(kg, lbs / 2.20462, places=0)
 
     def test_multi_shipment_has_two_records(self):
@@ -239,6 +240,53 @@ class TestScoring(unittest.TestCase):
         naive = score_corpus(docs, naive_predictions(docs))
         self.assertGreater(naive.pass_rate("critical"), empty.pass_rate("critical"))
         self.assertLess(naive.pass_rate("critical"), 0.95)
+
+
+class TestTextureDiversity(unittest.TestCase):
+    def setUp(self):
+        self.docs = Generator(20260811).corpus(200)
+
+    def test_no_universal_label_block(self):
+        share = sum("\nMode: " in d.body for d in self.docs) / len(self.docs)
+        self.assertLessEqual(share, 0.45)   # v0.2 value: 1.00
+
+    def test_greeting_variety(self):
+        firsts = {d.body.splitlines()[0] for d in self.docs if d.body.strip()}
+        self.assertGreaterEqual(len(firsts), 6)
+
+    def test_forwarded_thread_quote_styles_vary(self):
+        markers = ("-----Original Message-----", "wrote:",
+                   "________________________________")
+        seen = {m for d in self.docs if d.pathology == "forwarded_thread"
+                for m in markers if m in d.body}
+        self.assertGreaterEqual(len(seen), 2)
+
+    def test_corpus_is_ascii(self):
+        for d in self.docs:
+            text = d.subject + "\n" + d.body
+            self.assertEqual(text, text.encode("ascii").decode("ascii"),
+                             f"{d.doc_id} contains non-ASCII")
+
+    def test_one_liner_is_clean_only(self):
+        # one_liner is the only layout that nulls a bundle of unstated fields
+        # on clean docs; other pathologies must keep their payload coverage.
+        for d in self.docs:
+            if d.pathology != "clean":
+                rec = d.shipments[0]
+                self.assertIsNotNone(rec["mode"])
+                self.assertIsNotNone(rec["commodity_description"])
+
+
+class TestTemplateArtifactKilled(unittest.TestCase):
+    """The v0.2 finding this spec exists to fix: naive regexes scored 96% on
+    the rigid pathologies. If naive can still do that, the texture failed."""
+
+    def test_naive_no_longer_aces_rigid_pathologies(self):
+        docs = [d.to_json() for d in Generator(20260811).corpus(200)]
+        report = score_corpus(docs, naive_predictions(docs))
+        for key in ("agent_not_shipper", "weight_conflict", "forwarded_thread"):
+            rate = report.pass_rate_for_pathology(key, "critical")
+            self.assertLessEqual(rate, 0.80, f"naive still aces {key}: {rate:.0%}")
 
 
 class TestSchema(unittest.TestCase):

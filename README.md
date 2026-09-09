@@ -54,9 +54,9 @@ pass rate (all)        53.9%
 pass rate (critical)   15.1%
 ```
 
-That floor is high on purpose and it is not noise. A null is the correct answer for every field the document does not state, and most fields in a real booking email are not stated. Any real system must clear this bar decisively before its headline number means anything. The critical-field figure is the honest one.
+That floor is high on purpose and it is not noise. A null is the correct answer for every field the document does not state, and most fields in a real booking email are not stated. Any real system must clear this bar decisively before its headline number means anything. The critical-field figure is the honest one. (v0.3, after one-liner clean mail started nulling unstated fields: 54.0% / 15.3% critical.)
 
-The bundled naive rule-based extractor, roughly what a competent engineer writes in an afternoon:
+The bundled naive rule-based extractor, roughly what a competent engineer writes in an afternoon. On the **v0.2 rigid-template corpus** it scored:
 
 ```
 pass rate (all)        92.7%
@@ -64,11 +64,23 @@ pass rate (critical)   88.6%
 hallucination rate      0.0%
 ```
 
-Its 88.6% looks strong until you break it out by pathology. It scores **59% on multi-shipment**, because it always emits exactly one record per email. Its zero hallucination rate is not restraint either: it does guess, unconditionally answering `dangerous_goods` as false whenever the email does not say otherwise, which is right 57.3% of the time for free. That field can never be scored as a hallucination because its truth is never null, so the guess is invisible in the headline. That profile — flattering average, catastrophic on one failure mode, and a free ride on another — is exactly what a single accuracy number conceals, and it is the reason this benchmark reports by cause.
+That 88.6% looked strong until you broke it out by pathology. It scored **59% on multi-shipment**, because it always emits exactly one record per email. Its zero hallucination rate was not restraint either: it does guess, unconditionally answering `dangerous_goods` as false whenever the email does not say otherwise, which is right 57.3% of the time for free. That field can never be scored as a hallucination because its truth is never null, so the guess is invisible in the headline. That profile — flattering average, catastrophic on one failure mode, and a free ride on another — is exactly what a single accuracy number conceals, and it is the reason this benchmark reports by cause.
 
-## Model results: the corpus is saturated
+On the **v0.3 textured corpus** (same seed, same pathologies, emails no longer one `Field: value` shape) the same frozen extractor lands here:
 
-Three Claude tiers, run 2026-08-16 on the canonical corpus (seed 20260811, n=200, prompt v2 from [`freightbench/llm.py`](freightbench/llm.py)):
+```
+pass rate (all)        68.2%
+pass rate (critical)   43.2%
+hallucination rate      0.0%
+```
+
+That drop is the point of the texture change, not a rewrite of the baseline. Naive still beats the empty extractor (15.3% critical). It is not updated to chase the new layouts.
+
+## Model results: the v0.2 corpus is saturated
+
+These numbers are from the **v0.2 rigid-template corpus**. They are not comparable to a v0.3 score. Texture changed the byte stream for the canonical seed on purpose; no v0.2 score should be read against a corpus generated after this change.
+
+Three Claude tiers, run 2026-08-16 on that v0.2 corpus (seed 20260811, n=200, prompt v2 from [`freightbench/llm.py`](freightbench/llm.py)):
 
 | System | Pass (all) | Pass (critical) | Wrong | Missed | Hallucination rate |
 |---|---|---|---|---|---|
@@ -96,7 +108,7 @@ Per-pathology, critical fields:
 | unit_ambiguity | 90% | 84% | 100% | 100% |
 | weight_conflict | 98% | 85% | 100% | 100% |
 
-What still holds:
+What still holds on that v0.2 corpus:
 
 1. **Haiku is the only model this corpus can grade,** and the interesting number is its 4.4% hallucination rate, not its 85.3% pass rate. Its inventions are booleans asserted from silence (`temperature_controlled: false` where the email says nothing) and country codes inferred from company legal suffixes. Both look harmless; both are the confident-wrong output that costs money when nobody is checking.
 2. **An afternoon of regexes beats Haiku overall** (88.6% against 85.3% on critical fields) and loses catastrophically on one thing: multi-shipment, 59% against 88%. Recognising that one email contains two bookings is structural understanding, and it is where a language model first earns its keep.
@@ -119,7 +131,7 @@ Every model failure this benchmark originally reported was a benchmark defect. F
 
 The last one is the subtlest and worth spelling out. Mapping Rotterdam to Amsterdam Schiphol, Busan to Incheon, Felixstowe to Heathrow and Santos to Guarulhos is not a name collision, it is a routing decision about which airport serves a port city, and forwarders resolve it differently. Only Shanghai was ever a genuine `CNSHA` versus `CNPVG` split. Asserting the rest as truth punished extractors for correctly reading the place the document named.
 
-Each fix preserves the random-number stream, so the same seed still regenerates byte-identical documents and predictions collected against the old ground truth rescore without re-running anything.
+Each v0.2 fix preserved the random-number stream, so the same seed still regenerated byte-identical v0.2 documents and predictions collected against the old ground truth could be rescored without re-running anything. v0.3 texture does **not** preserve that byte stream: it is a corpus version bump.
 
 ## Scoring rules worth knowing
 
@@ -144,19 +156,21 @@ Field names and comparison rules are in [`freightbench/schema.py`](freightbench/
 python3 -m unittest discover -s tests
 ```
 
-38 tests covering determinism, ground-truth correctness per pathology, that the outcome categories stay distinct, and one invariant learned the hard way: **every non-null truth value must be evidenced in the document**. A benchmark that is not tested is an opinion with a percentage sign attached.
+46 tests covering determinism, ground-truth correctness per pathology, texture diversity, that the outcome categories stay distinct, and one invariant learned the hard way: **every non-null truth value must be evidenced in the document**. A benchmark that is not tested is an opinion with a percentage sign attached.
 
 ## Status and honesty about scope
 
-Version 0.2, and the honest summary is that **this corpus is solved.** Any current frontier model clears it completely. It still separates a small model from a large one, and it still measures hallucination usefully, but it cannot tell a very good extraction system from a perfect one. Until the corpus gets harder, a high score here means the obstacle course was designed too easy, not that a system is ready for live mail.
+Version 0.3 is in progress. This release ships the first axis: **email texture**. Generated mail is no longer a single `Field: value` template. Registers, layouts, subjects, signatures, thread quoting and a generic confidentiality footer vary independently of pathology. Pathology payloads are unchanged. `BK-#####` reference formats are unchanged. New pathologies are not in this release.
 
-What exists: the generator, the schema, deterministic scoring, two reference extractors, a versioned canonical prompt, and full results for three Claude tiers.
+The honest summary of **v0.2** remains: **that corpus was solved.** Sonnet and Opus cleared it completely. Texture exists because the v0.1/v0.2 templates were regex-friendly, which flattered rules. Naive still beat Sonnet and Opus on `agent_not_shipper`, `weight_conflict` and `forwarded_thread` (96% vs ~90%) when every document carried the same labels. That was a limitation of the corpus, not a finding about models. On the textured corpus the same frozen naive extractor drops to 43.2% critical overall, and below 50% on those three pathologies. A new model run has not been done yet; until it is, do not read the v0.2 table as a current ranking.
 
-**No v0.1 number is comparable to anything above.** Four ground-truth and prompt defects were fixed between them, documented in the results section, because a benchmark that hides its own bugs is worth less than one that publishes them.
+**No v0.2 number is comparable to a v0.3 number**, for the same reason no v0.1 number was comparable to v0.2: the documents changed. Same seed, different bytes, by design.
 
-What does not exist yet, and should be assumed missing rather than implied: raw-API model runs with pinned sampling, non-Claude models, LLM-judged scoring for the free-text fields, and PDF and HAWB documents (currently email bodies only).
+What exists: the generator (now with a texture axis), the schema, deterministic scoring, two reference extractors, a versioned canonical prompt, and v0.2 results for three Claude tiers.
 
-The v0.3 work is therefore not a polish pass. Document texture is uniform enough that a regex extractor beats a small model on nine of eleven pathologies, and the pathologies themselves are too easy to separate the top two tiers at all. Both have to change before another model number is worth publishing.
+What does not exist yet, and should be assumed missing rather than implied: a v0.3 model run, the rest of the v0.3 spec (new pathologies, reference-format overhaul), raw-API model runs with pinned sampling, non-Claude models, LLM-judged scoring for the free-text fields, and PDF and HAWB documents (currently email bodies only).
+
+The confidentiality footer is a generic two-sentence disclaimer. The research did not verify a freight-specific one, so the corpus carries a generic one and that is an assumption, not a sourced pattern.
 
 The synthetic corpus is a model of the problem, not a sample of it. It is built from the failure modes I have watched break production extraction pipelines, which is a real but partial view, and a system that scores well here has cleared a designed obstacle course rather than proven itself on live mail.
 
